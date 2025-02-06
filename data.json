@@ -1,0 +1,13 @@
+{
+    "words": [
+      {"text": "The", "intensity": 0.2},
+      {"text": "quick", "intensity": 0.8},
+      {"text": "brown", "intensity": 0.5},
+      {"text": "fox", "intensity": 0.9},
+      {"text": "jumps", "intensity": 0.7},
+      {"text": "over", "intensity": 0.3},
+      {"text": "the", "intensity": 0.1},
+      {"text": "lazy", "intensity": 0.4},
+      {"text": "dog", "intensity": 0.6}
+    ]
+  }
