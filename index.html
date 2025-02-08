@@ -5,7 +5,6 @@
   <title>SAE Visualization</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   
-  <!-- Optional basic styling -->
   <style>
     body {
       font-family: sans-serif;
@@ -33,14 +32,17 @@
     .filters {
       margin-top: 10px;
     }
+    .meta-row {
+      margin-bottom: 6px;
+    }
   </style>
 </head>
 <body>
   <header>
     <h1>SAE Feature Visualization</h1>
     
-    <!-- Dataset selection -->
-    <label for="datasetSelect">Select dataset:</label>
+    <!-- Dataset selection (also corresponds to layer) -->
+    <label for="datasetSelect">Select dataset (layer):</label>
     <select id="datasetSelect">
       <option value="data_16.json.gz">Layer 16</option>
       <option value="data_18.json.gz">Layer 18</option>
@@ -48,34 +50,39 @@
     </select>
     <button id="loadBtn">Load</button>
     
-    <!-- Filter controls -->
+    <!-- Filter & Sort controls -->
     <div class="filters">
-      <label>Layer:
-        <input type="number" id="layerFilter" placeholder="e.g. 16" />
-      </label>
       <label>Feature:
-        <input type="number" id="featureFilter" placeholder="e.g. 5" />
+        <select id="featureSelect"></select>
       </label>
       <label>Group:
-        <input type="text" id="groupFilter" placeholder="e.g. some-group" />
+        <select id="groupSelect"></select>
       </label>
       <label>Sub Source:
-        <input type="text" id="subSourceFilter" placeholder="e.g. sub-source" />
+        <select id="subSourceSelect"></select>
       </label>
       <label>Model:
-        <input type="text" id="modelFilter" placeholder="e.g. model-name" />
+        <select id="modelSelect"></select>
       </label>
       <label>Label:
-        <input type="number" id="labelFilter" placeholder="e.g. 1" />
+        <select id="labelSelect"></select>
       </label>
-      <button id="filterBtn">Apply Filters</button>
+      
+      <label>Sort by Feature Activation:
+        <select id="sortOrderSelect">
+          <option value="desc">Descending</option>
+          <option value="asc">Ascending</option>
+        </select>
+      </label>
+
+      <button id="filterBtn">Apply Filters & Sort</button>
     </div>
   </header>
   
   <!-- Visualization container -->
   <div id="visualizationContainer"></div>
   
-  <!-- Include Pako for GZip decompression -->
+  <!-- Pako for GZip decompression -->
   <script src="./libs/pako.min.js"></script>
   <!-- Main script -->
   <script src="./script.js"></script>
