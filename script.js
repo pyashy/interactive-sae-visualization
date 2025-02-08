@@ -1,36 +1,89 @@
 // script.js
 
-let loadedData = [];  // Will hold the JSON array after loading
+let loadedData = [];  // Will hold the JSON array after loading (for the selected dataset).
 
 document.addEventListener('DOMContentLoaded', () => {
-  const loadBtn = document.getElementById('loadBtn');
+  // HTML elements
   const datasetSelect = document.getElementById('datasetSelect');
-  
-  // Filter controls
-  const layerFilter = document.getElementById('layerFilter');
-  const featureFilter = document.getElementById('featureFilter');
-  const groupFilter = document.getElementById('groupFilter');
-  const subSourceFilter = document.getElementById('subSourceFilter');
-  const modelFilter = document.getElementById('modelFilter');
-  const labelFilter = document.getElementById('labelFilter');
+  const loadBtn = document.getElementById('loadBtn');
+
+  // Filter elements
+  const featureSelect = document.getElementById('featureSelect');
+  const groupSelect = document.getElementById('groupSelect');
+  const subSourceSelect = document.getElementById('subSourceSelect');
+  const modelSelect = document.getElementById('modelSelect');
+  const labelSelect = document.getElementById('labelSelect');
+  const sortOrderSelect = document.getElementById('sortOrderSelect');
   const filterBtn = document.getElementById('filterBtn');
   
+  // When user clicks "Load" for a particular dataset
   loadBtn.addEventListener('click', async () => {
     const fileName = datasetSelect.value;
+
+    // 1) Load + decompress the dataset
     loadedData = await loadAndDecompress(`./data/${fileName}`);
+    if (!loadedData || loadedData.length === 0) {
+      alert('No data found or failed to load data.');
+      return;
+    }
+
+    // 2) Compute the featureActivation for each entry
+    loadedData.forEach(entry => {
+      const sum = entry.firing_magnitudes.reduce((acc, val) => acc + val, 0);
+      entry.featureActivation = sum;
+    });
+
+    // 3) Gather unique sets for each filter
+    const features = new Set();
+    const groups = new Set();
+    const subSources = new Set();
+    const models = new Set();
+    const labels = new Set();
+
+    loadedData.forEach(entry => {
+      features.add(entry.feature);
+      groups.add(entry.group);
+      subSources.add(entry.sub_source);
+      models.add(entry.model);
+      labels.add(entry.label);
+    });
+
+    // Convert sets to arrays and sort them (so dropdowns are in sorted order)
+    const featuresArray = Array.from(features).sort((a, b) => a - b);
+    const groupsArray = Array.from(groups).sort();
+    const subSourcesArray = Array.from(subSources).sort();
+    const modelsArray = Array.from(models).sort();
+    const labelsArray = Array.from(labels).sort((a, b) => a - b);
+
+    // 4) Populate filter dropdowns
+    populateDropdown(featureSelect, featuresArray, 'All Features');
+    populateDropdown(groupSelect, groupsArray, 'All Groups');
+    populateDropdown(subSourceSelect, subSourcesArray, 'All Sub Sources');
+    populateDropdown(modelSelect, modelsArray, 'All Models');
+    populateDropdown(labelSelect, labelsArray, 'All Labels');
+
+    // 5) Sort loadedData by featureActivation desc by default
+    loadedData.sort((a, b) => b.featureActivation - a.featureActivation);
+
+    // 6) Render
     renderData(loadedData);
   });
   
+  // When user clicks "Apply Filters & Sort"
   filterBtn.addEventListener('click', () => {
-    // On apply filters, we filter the loadedData
+    // Filter the loaded data
     const filtered = filterData(loadedData, {
-      layer: layerFilter.value,
-      feature: featureFilter.value,
-      group: groupFilter.value,
-      sub_source: subSourceFilter.value,
-      model: modelFilter.value,
-      label: labelFilter.value
+      feature: featureSelect.value,
+      group: groupSelect.value,
+      subSource: subSourceSelect.value,
+      model: modelSelect.value,
+      label: labelSelect.value
     });
+
+    // Sort by featureActivation ascending or descending
+    const sortOrder = sortOrderSelect.value; // "desc" or "asc"
+    sortData(filtered, sortOrder);
+
     renderData(filtered);
   });
 });
@@ -59,82 +112,114 @@ async function loadAndDecompress(url) {
 }
 
 /**
- * Renders the data into the #visualizationContainer
- * Each entry is shown with tokens colored by firing_magnitudes.
- * @param {Object[]} data - Array of data entries
+ * Populates a <select> element with the given options,
+ * plus an "All ..." option as the default.
+ */
+function populateDropdown(selectEl, items, allLabel) {
+  // Clear existing options
+  selectEl.innerHTML = '';
+  
+  // Add "All" option
+  const allOpt = document.createElement('option');
+  allOpt.value = 'all';
+  allOpt.textContent = allLabel;
+  selectEl.appendChild(allOpt);
+
+  // Add each item
+  items.forEach(value => {
+    const opt = document.createElement('option');
+    opt.value = value;
+    opt.textContent = value;
+    selectEl.appendChild(opt);
+  });
+
+  // Reset selection to "All"
+  selectEl.value = 'all';
+}
+
+/**
+ * Filters the data array based on the user's dropdown selections.
+ * If a dropdown is set to 'all', we ignore that field.
+ */
+function filterData(data, filters) {
+  return data.filter(item => {
+    if (filters.feature !== 'all' && item.feature !== parseInt(filters.feature)) {
+      return false;
+    }
+    if (filters.group !== 'all' && item.group !== filters.group) {
+      return false;
+    }
+    if (filters.subSource !== 'all' && item.sub_source !== filters.subSource) {
+      return false;
+    }
+    if (filters.model !== 'all' && item.model !== filters.model) {
+      return false;
+    }
+    if (filters.label !== 'all' && item.label !== parseInt(filters.label)) {
+      return false;
+    }
+    return true;
+  });
+}
+
+/**
+ * Sorts the data array by the 'featureActivation' in ascending or descending order.
+ */
+function sortData(data, sortOrder) {
+  if (sortOrder === 'asc') {
+    data.sort((a, b) => a.featureActivation - b.featureActivation);
+  } else {
+    // "desc"
+    data.sort((a, b) => b.featureActivation - a.featureActivation);
+  }
+}
+
+/**
+ * Renders the data into the #visualizationContainer.
+ * Shows tokens colored by firing_magnitudes,
+ * and displays featureActivation for each entry.
  */
 function renderData(data) {
   const container = document.getElementById('visualizationContainer');
   container.innerHTML = ''; // Clear current display
   
-  data.forEach((entry) => {
-    const { tokens, firing_magnitudes } = entry;
-    // Find max magnitude for the entry to normalize color intensity
-    const maxVal = Math.max(...firing_magnitudes);
+  data.forEach(entry => {
+    const { tokens, firing_magnitudes, featureActivation } = entry;
     
-    // Create a container for the entire entry
     const entryDiv = document.createElement('div');
     entryDiv.className = 'entry';
     
-    // Render any metadata (layer, feature, etc.) at the top if you want
+    // Metadata row
     const metaDiv = document.createElement('div');
-    metaDiv.textContent = `Layer: ${entry.layer}, Feature: ${entry.feature}, Group: ${entry.group}, SubSource: ${entry.sub_source}, Model: ${entry.model}, Label: ${entry.label}`;
+    metaDiv.className = 'meta-row';
+    metaDiv.textContent =
+      `Feature: ${entry.feature}, Group: ${entry.group}, SubSource: ${entry.sub_source}, ` +
+      `Model: ${entry.model}, Label: ${entry.label}, ` +
+      `Feature Activation: ${featureActivation.toFixed(2)}`;
     entryDiv.appendChild(metaDiv);
     
-    // Create a paragraph for the text
-    const textPara = document.createElement('p');
+    // Max magnitude for normalizing color
+    const maxVal = Math.max(...firing_magnitudes);
     
+    // Tokens row
+    const textPara = document.createElement('p');
     tokens.forEach((word, idx) => {
       const magnitude = firing_magnitudes[idx];
-      let norm = 0;
-      if (maxVal > 0) {
-        norm = magnitude / maxVal;  // 0 to 1
-      }
+      let norm = (maxVal === 0) ? 0 : magnitude / maxVal;
       
-      // Create a span for each token
       const wordSpan = document.createElement('span');
       wordSpan.className = 'token';
       wordSpan.textContent = word;
-      
-      // Tooltip showing the magnitude
       wordSpan.title = `Magnitude: ${magnitude.toFixed(4)}`;
       
-      // Background color: from white to green
-      // Using RGBA: alpha = norm
-      // Alternatively, you could keep alpha=1 and vary the intensity of green
-      // e.g. backgroundColor = `rgb(0, ${Math.floor(norm * 255)}, 0)`
+      // background from white to green depending on norm
       wordSpan.style.backgroundColor = `rgba(0, 255, 0, ${norm})`;
       
-      // Alternatively:
-      // wordSpan.style.backgroundColor = '#fff'; // default to white
-      // const greenVal = Math.floor(norm * 255);
-      // wordSpan.style.backgroundColor = `rgb(${255 - greenVal}, 255, ${255 - greenVal})`
-      
       textPara.appendChild(wordSpan);
-      textPara.appendChild(document.createTextNode(' ')); // space
+      textPara.appendChild(document.createTextNode(' '));
     });
-    
     entryDiv.appendChild(textPara);
-    container.appendChild(entryDiv);
-  });
-}
-
-/**
- * Filters the data array based on the non-empty filter fields.
- * @param {Object[]} data - The data array to filter
- * @param {Object} filterObj - Contains potential filter values
- */
-function filterData(data, filterObj) {
-  return data.filter(item => {
-    // For each property in filterObj, if it has a value, we compare
-    // Example: if filterObj.layer is "16", then item.layer must be 16
-    if (filterObj.layer && item.layer !== parseInt(filterObj.layer)) return false;
-    if (filterObj.feature && item.feature !== parseInt(filterObj.feature)) return false;
-    if (filterObj.group && item.group !== filterObj.group) return false;
-    if (filterObj.sub_source && item.sub_source !== filterObj.sub_source) return false;
-    if (filterObj.model && item.model !== filterObj.model) return false;
-    if (filterObj.label && item.label !== parseInt(filterObj.label)) return false;
     
-    return true;
+    container.appendChild(entryDiv);
   });
 }
