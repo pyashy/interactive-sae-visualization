@@ -1,16 +1,83 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Interactive Text Visualization</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <title>SAE Visualization</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <!-- Optional basic styling -->
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 20px;
+    }
+    header {
+      margin-bottom: 20px;
+    }
+    label {
+      margin-right: 10px;
+    }
+    select, button {
+      margin-right: 15px;
+    }
+    .entry {
+      margin: 10px 0;
+      padding: 10px;
+      border: 1px solid #aaa;
+    }
+    .token {
+      margin: 0 2px;
+      padding: 2px 5px;
+      cursor: pointer;
+    }
+    .filters {
+      margin-top: 10px;
+    }
+  </style>
 </head>
 <body>
-  <h1>Interactive Text Visualization</h1>
-  <div id="word-container"></div>
+  <header>
+    <h1>SAE Feature Visualization</h1>
+    
+    <!-- Dataset selection -->
+    <label for="datasetSelect">Select dataset:</label>
+    <select id="datasetSelect">
+      <option value="data_16.json.gz">Layer 16</option>
+      <option value="data_18.json.gz">Layer 18</option>
+      <option value="data_20.json.gz">Layer 20</option>
+    </select>
+    <button id="loadBtn">Load</button>
+    
+    <!-- Filter controls -->
+    <div class="filters">
+      <label>Layer:
+        <input type="number" id="layerFilter" placeholder="e.g. 16" />
+      </label>
+      <label>Feature:
+        <input type="number" id="featureFilter" placeholder="e.g. 5" />
+      </label>
+      <label>Group:
+        <input type="text" id="groupFilter" placeholder="e.g. some-group" />
+      </label>
+      <label>Sub Source:
+        <input type="text" id="subSourceFilter" placeholder="e.g. sub-source" />
+      </label>
+      <label>Model:
+        <input type="text" id="modelFilter" placeholder="e.g. model-name" />
+      </label>
+      <label>Label:
+        <input type="number" id="labelFilter" placeholder="e.g. 1" />
+      </label>
+      <button id="filterBtn">Apply Filters</button>
+    </div>
+  </header>
   
-  <script src="https://d3js.org/d3.v6.min.js"></script> <!-- D3.js CDN -->
-  <script src="script.js"></script>
+  <!-- Visualization container -->
+  <div id="visualizationContainer"></div>
+  
+  <!-- Include Pako for GZip decompression -->
+  <script src="./libs/pako.min.js"></script>
+  <!-- Main script -->
+  <script src="./script.js"></script>
 </body>
 </html>
