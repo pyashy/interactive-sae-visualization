@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // HTML elements
   const datasetSelect = document.getElementById('datasetSelect');
   const loadBtn = document.getElementById('loadBtn');
+  const loadingIndicator = document.getElementById('loadingIndicator');
 
   // Filter elements
   const featureSelect = document.getElementById('featureSelect');
@@ -18,12 +19,16 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // When user clicks "Load" for a particular dataset
   loadBtn.addEventListener('click', async () => {
+    // Show the loading indicator
+    loadingIndicator.style.display = 'block';
+
     const fileName = datasetSelect.value;
 
     // 1) Load + decompress the dataset
     loadedData = await loadAndDecompress(`./data/${fileName}`);
     if (!loadedData || loadedData.length === 0) {
       alert('No data found or failed to load data.');
+      loadingIndicator.style.display = 'none';
       return;
     }
 
@@ -48,7 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
       labels.add(entry.label);
     });
 
-    // Convert sets to arrays and sort them (so dropdowns are in sorted order)
+    // Convert sets to arrays and sort them
     const featuresArray = Array.from(features).sort((a, b) => a - b);
     const groupsArray = Array.from(groups).sort();
     const subSourcesArray = Array.from(subSources).sort();
@@ -67,11 +72,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 6) Render
     renderData(loadedData);
+
+    // Hide the loading indicator once done
+    loadingIndicator.style.display = 'none';
   });
   
   // When user clicks "Apply Filters & Sort"
   filterBtn.addEventListener('click', () => {
-    // Filter the loaded data
+    // In case filtering a large dataset also takes time, optionally show the indicator:
+    // loadingIndicator.style.display = 'block';
+
     const filtered = filterData(loadedData, {
       feature: featureSelect.value,
       group: groupSelect.value,
@@ -80,11 +90,13 @@ document.addEventListener('DOMContentLoaded', () => {
       label: labelSelect.value
     });
 
-    // Sort by featureActivation ascending or descending
     const sortOrder = sortOrderSelect.value; // "desc" or "asc"
     sortData(filtered, sortOrder);
 
     renderData(filtered);
+
+    // Hide if you showed it
+    // loadingIndicator.style.display = 'none';
   });
 });
 
@@ -133,13 +145,13 @@ function populateDropdown(selectEl, items, allLabel) {
     selectEl.appendChild(opt);
   });
 
-  // Reset selection to "All"
+  // Reset selection to "all"
   selectEl.value = 'all';
 }
 
 /**
  * Filters the data array based on the user's dropdown selections.
- * If a dropdown is set to 'all', we ignore that field.
+ * If a dropdown is set to 'all', ignore that field.
  */
 function filterData(data, filters) {
   return data.filter(item => {
@@ -163,21 +175,20 @@ function filterData(data, filters) {
 }
 
 /**
- * Sorts the data array by the 'featureActivation' in ascending or descending order.
+ * Sorts the data array by 'featureActivation' in ascending or descending order.
  */
 function sortData(data, sortOrder) {
   if (sortOrder === 'asc') {
     data.sort((a, b) => a.featureActivation - b.featureActivation);
   } else {
-    // "desc"
     data.sort((a, b) => b.featureActivation - a.featureActivation);
   }
 }
 
 /**
  * Renders the data into the #visualizationContainer.
- * Shows tokens colored by firing_magnitudes,
- * and displays featureActivation for each entry.
+ * Shows tokens colored by firing_magnitudes, 
+ * with no extra whitespace appended.
  */
 function renderData(data) {
   const container = document.getElementById('visualizationContainer');
@@ -205,21 +216,20 @@ function renderData(data) {
     const textPara = document.createElement('p');
     tokens.forEach((word, idx) => {
       const magnitude = firing_magnitudes[idx];
-      let norm = (maxVal === 0) ? 0 : magnitude / maxVal;
+      const norm = maxVal === 0 ? 0 : magnitude / maxVal;
       
       const wordSpan = document.createElement('span');
       wordSpan.className = 'token';
-      wordSpan.textContent = word;
+      wordSpan.textContent = word;              // No extra " " appended
       wordSpan.title = `Magnitude: ${magnitude.toFixed(4)}`;
-      
-      // background from white to green depending on norm
       wordSpan.style.backgroundColor = `rgba(0, 255, 0, ${norm})`;
       
       textPara.appendChild(wordSpan);
-      textPara.appendChild(document.createTextNode(' '));
+      // Removed the "document.createTextNode(' ')" to avoid extra whitespace
     });
     entryDiv.appendChild(textPara);
     
     container.appendChild(entryDiv);
   });
 }
+
