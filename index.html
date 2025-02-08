@@ -35,6 +35,12 @@
     .meta-row {
       margin-bottom: 6px;
     }
+    .loading {
+      display: none; /* hidden by default */
+      font-weight: bold;
+      color: #444;
+      margin: 10px 0;
+    }
   </style>
 </head>
 <body>
@@ -78,6 +84,9 @@
       <button id="filterBtn">Apply Filters & Sort</button>
     </div>
   </header>
+
+  <!-- A small loading indicator -->
+  <div id="loadingIndicator" class="loading">Loading, please wait...</div>
   
   <!-- Visualization container -->
   <div id="visualizationContainer"></div>
@@ -88,3 +97,4 @@
   <script src="./script.js"></script>
 </body>
 </html>
+
