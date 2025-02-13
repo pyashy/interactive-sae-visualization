@@ -2,6 +2,7 @@ const METADATA_FOLDER = 'metadata/';
 const DATA_FOLDER = 'data/';
 const TEXTS_FOLDER = 'texts/';
 const AVAILABLE_LAYERS = [8,10,12,14,16,18,20];
+
 const layerSelectEl = document.getElementById('layerSelect');
 const featureSelectEl = document.getElementById('featureSelect');
 const featureTagsEl = document.getElementById('featureTags');
@@ -9,6 +10,8 @@ const textsContainerEl = document.getElementById('textsContainer');
 const featureInfoEl = document.getElementById('featureInfo');
 const featureDomainTablesEl = document.getElementById('featureDomainTables');
 const groupSelectEl = document.getElementById('groupSelect');
+const minSumActivEl = document.getElementById('minSumActiv');
+
 let currentLayerMetadata = null;
 let currentLayer = null;
 let currentFeature = null;
@@ -19,6 +22,7 @@ function initPage() {
   layerSelectEl.addEventListener('change', onLayerChange);
   featureSelectEl.addEventListener('change', onFeatureChange);
   groupSelectEl.addEventListener('change', renderTextsList);
+  minSumActivEl.addEventListener('change', renderTextsList);
   layerSelectEl.value = AVAILABLE_LAYERS[0];
   onLayerChange();
 }
@@ -129,8 +133,13 @@ function showFeatureMetadata() {
 
 async function renderTextsList() {
   textsContainerEl.innerHTML = '';
-  const selectedGroups = Array.from(groupSelectEl.selectedOptions).map(opt => opt.value);
-  const filtered = currentDataForTexts.filter(item => selectedGroups.includes(item.group));
+  const selectedGroup = groupSelectEl.value;
+  const minActivValue = parseFloat(minSumActivEl.value || 0);
+  let filtered = currentDataForTexts;
+  if (selectedGroup !== 'all') {
+    filtered = filtered.filter(item => item.group === selectedGroup);
+  }
+  filtered = filtered.filter(item => item.sumActivations >= minActivValue);
   for (const item of filtered) {
     const textId = item.text_id;
     let textData;
@@ -145,7 +154,13 @@ async function renderTextsList() {
     textDiv.classList.add('text-item');
     const metaDiv = document.createElement('div');
     metaDiv.classList.add('text-meta');
-    metaDiv.textContent = `text_id=${textData.text_id}, sub_source=${textData.sub_source}, model=${textData.model}, label=${textData.label}`;
+    metaDiv.textContent = (
+      `text_id=${textData.text_id}, ` +
+      `sum_activation=${item.sumActivations}, ` +
+      `sub_source=${textData.sub_source}, ` +
+      `model=${textData.model}, ` +
+      `label=${textData.label}`
+    );
     textDiv.appendChild(metaDiv);
     const tokensContainer = document.createElement('div');
     tokensContainer.classList.add('tokens-container');
@@ -166,3 +181,4 @@ async function renderTextsList() {
 }
 
 window.addEventListener('DOMContentLoaded', initPage);
+
