@@ -10,7 +10,6 @@ const textsContainerEl = document.getElementById('textsContainer');
 const featureInfoEl = document.getElementById('featureInfo');
 const featureDomainTablesEl = document.getElementById('featureDomainTables');
 const groupSelectEl = document.getElementById('groupSelect');
-const minSumActivEl = document.getElementById('minSumActiv');
 
 let currentLayerMetadata = null;
 let currentLayer = null;
@@ -22,7 +21,6 @@ function initPage() {
   layerSelectEl.addEventListener('change', onLayerChange);
   featureSelectEl.addEventListener('change', onFeatureChange);
   groupSelectEl.addEventListener('change', renderTextsList);
-  minSumActivEl.addEventListener('change', renderTextsList);
   layerSelectEl.value = AVAILABLE_LAYERS[0];
   onLayerChange();
 }
@@ -134,12 +132,10 @@ function showFeatureMetadata() {
 async function renderTextsList() {
   textsContainerEl.innerHTML = '';
   const selectedGroup = groupSelectEl.value;
-  const minActivValue = parseFloat(minSumActivEl.value || 0);
   let filtered = currentDataForTexts;
   if (selectedGroup !== 'all') {
     filtered = filtered.filter(item => item.group === selectedGroup);
   }
-  filtered = filtered.filter(item => item.sumActivations >= minActivValue);
   for (const item of filtered) {
     const textId = item.text_id;
     let textData;
@@ -156,7 +152,7 @@ async function renderTextsList() {
     metaDiv.classList.add('text-meta');
     metaDiv.textContent = (
       `text_id=${textData.text_id}, ` +
-      `sum_activation=${item.sumActivations}, ` +
+      `Activations Sum=${item.sumActivations}, ` +
       `sub_source=${textData.sub_source}, ` +
       `model=${textData.model}, ` +
       `label=${textData.label}`
@@ -181,4 +177,3 @@ async function renderTextsList() {
 }
 
 window.addEventListener('DOMContentLoaded', initPage);
-
