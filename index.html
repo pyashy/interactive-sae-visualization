@@ -31,6 +31,12 @@
     #right-column {
       padding-left: 1em;
     }
+    .filters {
+      display: flex;
+      gap: 1em;
+      margin-bottom: 1em;
+      flex-wrap: wrap;
+    }
     .text-item {
       margin-bottom: 2em;
       border-bottom: 1px solid #e0e0e0;
@@ -48,9 +54,6 @@
     .token {
       margin: 0 0.1em;
       padding: 0 0.1em;
-    }
-    .group-filter {
-      margin-bottom: 1em;
     }
     table.domain-table {
       border-collapse: collapse;
@@ -77,24 +80,30 @@
       <span id="featureTags" style="font-weight: bold;"></span>
     </div>
   </header>
+
   <main>
     <div id="left-column">
-      <div class="group-filter">
+      <div class="filters">
         <label for="groupSelect">Group:</label>
-        <select id="groupSelect" multiple size="3">
+        <select id="groupSelect">
+          <option value="all">All</option>
           <option value="Not activated" selected>Not activated</option>
           <option value="Bottom activated" selected>Bottom activated</option>
           <option value="Top activated" selected>Top activated</option>
         </select>
+        <label for="minSumActiv">Min sum activation:</label>
+        <input type="number" id="minSumActiv" step="0.01" value="0">
       </div>
       <div id="textsContainer"></div>
     </div>
+
     <div id="right-column">
       <h3>Feature metadata</h3>
       <div id="featureInfo"></div>
       <div id="featureDomainTables"></div>
     </div>
   </main>
+
   <script src="script.js"></script>
 </body>
 </html>
