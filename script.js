@@ -22,6 +22,7 @@ function initPage() {
   layerSelectEl.addEventListener('change', onLayerChange);
   featureSelectEl.addEventListener('change', onFeatureChange);
   groupSelectEl.addEventListener('change', renderTextsList);
+  groupSelectEl.addEventListener('change', renderTextsList);
   layerSelectEl.value = AVAILABLE_LAYERS[0];
   onLayerChange();
 }
