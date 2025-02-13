@@ -1,16 +1,16 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Визуализация активаций</title>
+  <meta charset="UTF-8">
+  <title>Feature Activation Visualization</title>
   <style>
     body {
-      margin: 0; 
+      margin: 0;
       font-family: sans-serif;
     }
     header {
-      padding: 1em; 
-      background: #f0f0f0; 
+      padding: 1em;
+      background: #f0f0f0;
       border-bottom: 1px solid #ddd;
     }
     .top-controls {
@@ -24,12 +24,10 @@
       gap: 1em;
       padding: 1em;
     }
-    /* Левая колонка */
     #left-column {
       border-right: 1px solid #ccc;
       padding-right: 1em;
     }
-    /* Правая колонка */
     #right-column {
       padding-left: 1em;
     }
@@ -50,17 +48,15 @@
     .token {
       margin: 0 0.1em;
       padding: 0 0.1em;
-      /* Небольшие отступы, чтобы видеть разделение */
     }
-    /* Фильтр по group */
-    .group-filter label {
-      margin-right: 1em;
+    .group-filter {
+      margin-bottom: 1em;
     }
     table.domain-table {
       border-collapse: collapse;
       width: 100%;
     }
-    table.domain-table td, 
+    table.domain-table td,
     table.domain-table th {
       border: 1px solid #ccc;
       padding: 4px;
@@ -71,315 +67,34 @@
   <header>
     <div class="top-controls">
       <label>
-        Слой:
-        <select id="layerSelect">
-          <!-- Список слоёв заполнится динамически или вручную -->
-        </select>
+        Layer:
+        <select id="layerSelect"></select>
       </label>
       <label>
-        Фича:
-        <select id="featureSelect">
-          <!-- Список фич заполнится после выбора слоя -->
-        </select>
+        Feature:
+        <select id="featureSelect"></select>
       </label>
       <span id="featureTags" style="font-weight: bold;"></span>
     </div>
   </header>
-
   <main>
     <div id="left-column">
       <div class="group-filter">
-        <label><input type="checkbox" class="groupCheckbox" value="Not activated" checked> Not activated</label>
-        <label><input type="checkbox" class="groupCheckbox" value="Bottom activated" checked> Bottom activated</label>
-        <label><input type="checkbox" class="groupCheckbox" value="Top activated" checked> Top activated</label>
+        <label for="groupSelect">Group:</label>
+        <select id="groupSelect" multiple size="3">
+          <option value="Not activated" selected>Not activated</option>
+          <option value="Bottom activated" selected>Bottom activated</option>
+          <option value="Top activated" selected>Top activated</option>
+        </select>
       </div>
-      <div id="textsContainer">
-        <!-- Список текстов будет отображаться здесь -->
-      </div>
+      <div id="textsContainer"></div>
     </div>
     <div id="right-column">
-      <h3>Метаданные фичи</h3>
-      <div id="featureInfo">
-        <!-- Выводим, например, Macro F1, Domain-Weighted F1 -->
-      </div>
-      <div id="featureDomainTables">
-        <!-- Таблица Domain F1 + Domain Ranks -->
-      </div>
+      <h3>Feature metadata</h3>
+      <div id="featureInfo"></div>
+      <div id="featureDomainTables"></div>
     </div>
   </main>
-
-  <script>
-    // -----------------------------------------
-    // ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ (для упрощения примера)
-    // -----------------------------------------
-    const METADATA_FOLDER = 'metadata/';  // Папка, где лежат 0.json, 1.json и т.д.
-    const DATA_FOLDER = 'data/';         // Папка, где лежат layer0_feature10.json и т.п.
-    const TEXTS_FOLDER = 'texts/';       // Папка, где лежат 10.json, 11.json и т.п.
-
-    // Селекторы
-    const layerSelectEl = document.getElementById('layerSelect');
-    const featureSelectEl = document.getElementById('featureSelect');
-    const featureTagsEl = document.getElementById('featureTags');
-    const textsContainerEl = document.getElementById('textsContainer');
-    const featureInfoEl = document.getElementById('featureInfo');
-    const featureDomainTablesEl = document.getElementById('featureDomainTables');
-
-    // Для фильтрации по group
-    const groupCheckboxes = document.querySelectorAll('.groupCheckbox');
-
-    // -----------------------------------------
-    // 1. ИНИЦИАЛИЗАЦИЯ: ЗАГРУЗКА СПИСКА СЛОЁВ
-    // -----------------------------------------
-    // Предположим, что вы знаете, что слои - это файлы "0.json", "1.json", ... "4.json" в папке metadata.
-    // В реальном проекте вы можете сделать fetch списка из GitHub API или просто захардкодить.
-    const availableLayers = [0,1,2,3,4];
-
-    function initLayerSelect() {
-      // Заполняем выпадающий список слоями
-      availableLayers.forEach(layer => {
-        const option = document.createElement('option');
-        option.value = layer;
-        option.textContent = `Слой ${layer}`;
-        layerSelectEl.appendChild(option);
-      });
-      // При изменении слоя -> грузим список фич
-      layerSelectEl.addEventListener('change', onLayerChange);
-      // При изменении фичи -> показываем тексты
-      featureSelectEl.addEventListener('change', onFeatureChange);
-      // При изменении чекбоксов group -> пересоздаем список текстов
-      groupCheckboxes.forEach(ch => ch.addEventListener('change', renderTextsList));
-
-      // По умолчанию выберем первый
-      layerSelectEl.value = availableLayers[0];
-      onLayerChange();
-    }
-
-    // -----------------------------------------
-    // 2. ЗАГРУЗКА METADATA ДЛЯ СЛОЯ И ВЫВОД СПИСКА ФИЧ
-    // -----------------------------------------
-    let currentLayerMetadata = null;  // Объект с содержимым 0.json, 1.json и т.д.
-
-    async function onLayerChange() {
-      const layer = layerSelectEl.value;
-      featureSelectEl.innerHTML = ''; // очистим список фич
-      // Загружаем файл metadata/<layer>.json
-      const url = `${METADATA_FOLDER}${layer}.json`;
-      try {
-        const response = await fetch(url);
-        currentLayerMetadata = await response.json(); // объект вида { "10319": {...}, "10320": {...} }
-      } catch (err) {
-        console.error('Ошибка загрузки метаданных слоя', err);
-        currentLayerMetadata = {};
-      }
-
-      // Заполним featureSelect (ключи из currentLayerMetadata)
-      for (const featureKey of Object.keys(currentLayerMetadata)) {
-        const option = document.createElement('option');
-        option.value = featureKey; 
-        // Для отображения: фича + указание Top 10 / Top 20, если есть
-        const featureObj = currentLayerMetadata[featureKey];
-        let labels = [];
-        if (featureObj["Top 10 Universal"]) {
-          labels.push('Universal');
-        }
-        if (featureObj["Top 20 Gain"]) {
-          labels.push('Gain');
-        }
-        const labelStr = labels.length > 0 ? ` (${labels.join(', ')})` : '';
-        option.textContent = `Фича ${featureKey}${labelStr}`;
-
-        featureSelectEl.appendChild(option);
-      }
-
-      // Выберем первую фичу автоматически (если есть)
-      if (featureSelectEl.options.length > 0) {
-        featureSelectEl.selectedIndex = 0;
-      }
-
-      onFeatureChange();
-    }
-
-    // -----------------------------------------
-    // 3. ПРИ ВЫБОРЕ ФИЧИ: 
-    //    - ЗАГРУЗИТЬ data/layerX_featureY.json
-    //    - ОТОБРАЗИТЬ ТЕКСТЫ (сортировать, фильтровать)
-    //    - ОТОБРАЗИТЬ МЕТАДАННЫЕ ФИЧИ (справа)
-    // -----------------------------------------
-    let currentLayer = null;
-    let currentFeature = null;
-    let currentDataForTexts = []; // [{text_id, group, activations: []}, ...]
-
-    async function onFeatureChange() {
-      currentLayer = layerSelectEl.value;
-      currentFeature = featureSelectEl.value;
-      // Обновим "ярлыки" фичи (слева от селекта) — например, "Universal", "Gain"
-      updateFeatureTags();
-
-      // 1) Загрузить data/layerX_featureY.json
-      const dataUrl = `${DATA_FOLDER}layer${currentLayer}_feature${currentFeature}.json`;
-      try {
-        const resp = await fetch(dataUrl);
-        currentDataForTexts = await resp.json();  // массив объектов
-      } catch (err) {
-        console.error('Ошибка загрузки', err);
-        currentDataForTexts = [];
-      }
-
-      // 2) Отсортировать по сумме активаций (в убывающем порядке)
-      currentDataForTexts.forEach(obj => {
-        obj.sumActivations = obj.activations.reduce((a,b) => a + b, 0);
-      });
-      currentDataForTexts.sort((a,b) => b.sumActivations - a.sumActivations);
-
-      // 3) Отобразить метаданные фичи (справа)
-      showFeatureMetadata();
-
-      // 4) Отрендерить список текстов (с учётом group-фильтров)
-      renderTextsList();
-    }
-
-    function updateFeatureTags() {
-      if (!currentFeature || !currentLayerMetadata) {
-        featureTagsEl.textContent = '';
-        return;
-      }
-      const featObj = currentLayerMetadata[currentFeature];
-      if (!featObj) {
-        featureTagsEl.textContent = '';
-        return;
-      }
-
-      const isTop10 = featObj["Top 10 Universal"];
-      const isTop20 = featObj["Top 20 Gain"];
-
-      let tagStrs = [];
-      if (isTop10) tagStrs.push('Universal');
-      if (isTop20) tagStrs.push('Gain');
-      featureTagsEl.textContent = tagStrs.length ? tagStrs.join(' / ') : '–';
-    }
-
-    // -----------------------------------------
-    // 4. ОТОБРАЖЕНИЕ МЕТАДАННЫХ ФИЧИ (ПРАВАЯ ЧАСТЬ)
-    // -----------------------------------------
-    function showFeatureMetadata() {
-      featureInfoEl.innerHTML = '';
-      featureDomainTablesEl.innerHTML = '';
-
-      if (!currentLayerMetadata || !currentFeature) return;
-      const featObj = currentLayerMetadata[currentFeature];
-      if (!featObj) return;
-
-      // Например, выведем "Macro F1", "Domain-Weighted F1", и т.д.
-      const macroF1 = featObj["Macro F1"];
-      const domainWeightedF1 = featObj["Domain-Weighted F1"];
-
-      const p = document.createElement('p');
-      p.textContent = `Macro F1: ${macroF1}, Domain-Weighted F1: ${domainWeightedF1}`;
-      featureInfoEl.appendChild(p);
-
-      // 4.1. Построим таблицу для "Domain F1"
-      const domainF1Obj = featObj["Domain F1"] || {};
-      const domainRanksObj = featObj["Domain Ranks"] || {};
-
-      // Для удобства соберём все ключи (доменные названия) и выведем 2 столбца
-      const domainNames = Object.keys(domainF1Obj); // Можно объединить ключи domainF1Obj + domainRanksObj
-      if (domainNames.length === 0) return;
-
-      // Создаём таблицу
-      const table = document.createElement('table');
-      table.classList.add('domain-table');
-      const header = document.createElement('tr');
-      header.innerHTML = `
-        <th>Domain</th>
-        <th>F1</th>
-        <th>Rank</th>
-      `;
-      table.appendChild(header);
-
-      domainNames.forEach(domain => {
-        const f1Val = domainF1Obj[domain];
-        const rankVal = domainRanksObj[domain];
-        const row = document.createElement('tr');
-        row.innerHTML = `
-          <td>${domain}</td>
-          <td>${(f1Val !== undefined) ? f1Val.toFixed ? f1Val.toFixed(4) : f1Val : ''}</td>
-          <td>${(rankVal !== undefined) ? rankVal : ''}</td>
-        `;
-        table.appendChild(row);
-      });
-
-      featureDomainTablesEl.appendChild(table);
-    }
-
-    // -----------------------------------------
-    // 5. ОТОБРАЖЕНИЕ ТЕКСТОВ (ЛЕВАЯ ЧАСТЬ)
-    // -----------------------------------------
-    async function renderTextsList() {
-      textsContainerEl.innerHTML = '';
-
-      // Получаем список group-фильтров, которые включены
-      const activeGroups = Array.from(groupCheckboxes)
-        .filter(ch => ch.checked)
-        .map(ch => ch.value);
-
-      // Фильтруем currentDataForTexts
-      const filteredData = currentDataForTexts.filter(item => activeGroups.includes(item.group));
-
-      for (const item of filteredData) {
-        const textId = item.text_id;
-
-        // Создаём контейнер
-        const textDiv = document.createElement('div');
-        textDiv.classList.add('text-item');
-
-        // Загрузим сам текст (tokens) + метаданные
-        let textData;
-        try {
-          const resp = await fetch(`${TEXTS_FOLDER}${textId}.json`);
-          textData = await resp.json();
-        } catch (err) {
-          console.error('Не удалось загрузить текст', textId, err);
-          continue;
-        }
-
-        // Выведем свойства текста: "text_id", "sub_source", "model", "label" ...
-        const metaDiv = document.createElement('div');
-        metaDiv.classList.add('text-meta');
-        metaDiv.textContent = `text_id=${textData.text_id}, sub_source=${textData.sub_source}, model=${textData.model}, label=${textData.label}`;
-        textDiv.appendChild(metaDiv);
-
-        // Отрисуем сами токены
-        const tokensContainer = document.createElement('div');
-        tokensContainer.classList.add('tokens-container');
-
-        // Найдём максимум активации (чтобы нормализовать)
-        const maxVal = Math.max(...item.activations, 0);
-
-        textData.tokens.forEach((token, idx) => {
-          const tokenSpan = document.createElement('span');
-          tokenSpan.classList.add('token');
-          tokenSpan.textContent = token;
-
-          const actVal = item.activations[idx] || 0.0;
-          let alpha = 0;
-          if (maxVal > 0) {
-            alpha = actVal / maxVal; // от 0 до 1
-          }
-          // Цвет фона: rgba(0, 255, 0, alpha)
-          tokenSpan.style.backgroundColor = `rgba(0, 255, 0, ${alpha})`;
-
-          tokensContainer.appendChild(tokenSpan);
-        });
-
-        textDiv.appendChild(tokensContainer);
-        textsContainerEl.appendChild(textDiv);
-      }
-    }
-
-    // -----------------------------------------
-    // Запуск
-    // -----------------------------------------
-    initLayerSelect();
-  </script>
+  <script src="script.js"></script>
 </body>
 </html>
