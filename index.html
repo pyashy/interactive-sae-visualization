@@ -36,6 +36,7 @@
       gap: 1em;
       margin-bottom: 1em;
       flex-wrap: wrap;
+      align-items: center;
     }
     .text-item {
       margin-bottom: 2em;
@@ -80,7 +81,6 @@
       <span id="featureTags" style="font-weight: bold;"></span>
     </div>
   </header>
-
   <main>
     <div id="left-column">
       <div class="filters">
@@ -91,19 +91,16 @@
           <option value="Bottom activated" selected>Bottom activated</option>
           <option value="Top activated" selected>Top activated</option>
         </select>
-        <label for="minSumActiv">Min sum activation:</label>
-        <input type="number" id="minSumActiv" step="0.01" value="0">
       </div>
       <div id="textsContainer"></div>
     </div>
-
     <div id="right-column">
       <h3>Feature metadata</h3>
       <div id="featureInfo"></div>
       <div id="featureDomainTables"></div>
     </div>
   </main>
-
   <script src="script.js"></script>
 </body>
 </html>
+
