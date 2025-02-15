@@ -22,6 +22,7 @@ function initPage() {
   featureSelectEl.addEventListener('change', onFeatureChange);
   groupSelectEl.addEventListener('change', renderTextsList);
 
+
   layerSelectEl.value = AVAILABLE_LAYERS[0];
   onLayerChange();
 }
@@ -40,48 +41,51 @@ async function onLayerChange() {
   currentLayer = layerSelectEl.value;
   featureSelectEl.innerHTML = '';
   currentLayerMetadata = null;
+  
   const url = `${METADATA_FOLDER}${currentLayer}.json`;
   try {
     const response = await fetch(url);
     currentLayerMetadata = await response.json();
   } catch (err) {
-    console.error(err);
+    console.error('Failed downloading metadata:', err);
     currentLayerMetadata = {};
   }
 
   const featureKeys = Object.keys(currentLayerMetadata);
   featureKeys.forEach(fKey => {
-    const option = document.createElement('option');
-    option.value = fKey;
-    const featObj = currentLayerMetadata[fKey];
+    const featObj = currentLayerMetadata[fKey] || {};
+
     const labels = [];
 
 
     if (featObj["Top 20 XGBoost"]) {
       labels.push('XGBoost');
-
-      const domains = featObj["Domains"];
-      const models = featObj["Models"];
-      let extra = [];
-      if (Array.isArray(domains) && domains.length > 0) {
-        extra.push(...domains);
-      }
-      if (Array.isArray(models) && models.length > 0) {
-        extra.push(...models);
-      }
-      if (extra.length > 0) {
-        labels.push(`(${extra.join(', ')})`);
-      }
     }
 
-    const labelStr = labels.length ? ` (${labels.join(' ')})` : '';
-    option.textContent = `Feature ${fKey}${labelStr}`;
+
+    if (Array.isArray(featObj["Domains"]) && featObj["Domains"].length > 0) {
+      labels.push(`Domains: ${featObj["Domains"].join(', ')}`);
+    }
+
+
+    if (Array.isArray(featObj["Models"]) && featObj["Models"].length > 0) {
+      labels.push(`Models: ${featObj["Models"].join(', ')}`);
+    }
+
+
+    const suffix = labels.length ? ` (${labels.join(' | ')})` : '';
+
+    const option = document.createElement('option');
+    option.value = fKey;
+    option.textContent = `Feature ${fKey}${suffix}`;
     featureSelectEl.appendChild(option);
   });
+
 
   if (featureSelectEl.options.length > 0) {
     featureSelectEl.selectedIndex = 0;
   }
+
   onFeatureChange();
 }
 
@@ -94,7 +98,7 @@ async function onFeatureChange() {
     const resp = await fetch(dataUrl);
     currentDataForTexts = await resp.json();
   } catch (err) {
-    console.error(err);
+    console.error('Ошибка при загрузке данных по текстам:', err);
     currentDataForTexts = [];
   }
 
@@ -110,30 +114,29 @@ async function onFeatureChange() {
 function updateFeatureTags() {
   featureTagsEl.textContent = '';
   if (!currentLayerMetadata || !currentFeature) return;
+
   const featObj = currentLayerMetadata[currentFeature];
   if (!featObj) return;
+
 
   const labels = [];
 
 
   if (featObj["Top 20 XGBoost"]) {
     labels.push('XGBoost');
-
-    const domains = featObj["Domains"];
-    const models = featObj["Models"];
-    let extra = [];
-    if (Array.isArray(domains) && domains.length > 0) {
-      extra.push(...domains);
-    }
-    if (Array.isArray(models) && models.length > 0) {
-      extra.push(...models);
-    }
-    if (extra.length > 0) {
-      labels.push(`(${extra.join(', ')})`);
-    }
   }
 
-  featureTagsEl.textContent = labels.join(' ');
+  if (Array.isArray(featObj["Domains"]) && featObj["Domains"].length > 0) {
+    labels.push(`Domains: ${featObj["Domains"].join(', ')}`);
+  }
+
+  if (Array.isArray(featObj["Models"]) && featObj["Models"].length > 0) {
+    labels.push(`Models: ${featObj["Models"].join(', ')}`);
+  }
+
+  if (labels.length > 0) {
+    featureTagsEl.textContent = labels.join(' | ');
+  }
 }
 
 function showFeatureMetadata() {
@@ -144,7 +147,7 @@ function showFeatureMetadata() {
   const featObj = currentLayerMetadata[currentFeature];
   if (!featObj) return;
 
-  // Показываем Macro F1 (Domain-Weighted F1 больше нет)
+  
   const p = document.createElement('p');
   const macroF1 = featObj["Macro F1"];
   if (macroF1 !== undefined) {
@@ -154,12 +157,14 @@ function showFeatureMetadata() {
   }
   featureInfoEl.appendChild(p);
 
+
   const domainF1Obj = featObj["Domain F1"] || {};
   const domainRanksObj = featObj["Domain Ranks"] || {};
   if (Object.keys(domainF1Obj).length > 0) {
     const domainTable = createF1RankTable(domainF1Obj, domainRanksObj, "Domain");
     featureDomainTablesEl.appendChild(domainTable);
   }
+
 
   const modelF1Obj = featObj["Models F1"] || {};
   const modelRanksObj = featObj["Models Ranks"] || {};
@@ -177,17 +182,18 @@ function createF1RankTable(f1Obj, rankObj, label) {
   header.innerHTML = `<th>${label}</th><th>F1</th><th>Rank</th>`;
   table.appendChild(header);
 
-  Object.keys(f1Obj).forEach(key => {
-    const row = document.createElement('tr');
+  for (const key of Object.keys(f1Obj)) {
     const f1Val = f1Obj[key];
     const rankVal = rankObj[key];
+
+    const row = document.createElement('tr');
     row.innerHTML = `
       <td>${key}</td>
-      <td>${(f1Val !== undefined && f1Val.toFixed) ? f1Val.toFixed(4) : (f1Val || '')}</td>
-      <td>${(rankVal !== undefined) ? rankVal : ''}</td>
+      <td>${(typeof f1Val === 'number' ? f1Val.toFixed(4) : f1Val)}</td>
+      <td>${rankVal !== undefined ? rankVal : ''}</td>
     `;
     table.appendChild(row);
-  });
+  }
 
   return table;
 }
@@ -208,13 +214,12 @@ async function renderTextsList() {
       const resp = await fetch(`${TEXTS_FOLDER}${textId}.json`);
       textData = await resp.json();
     } catch (err) {
-      console.error(err);
+      console.error(`Failed while loading ${textId}:`, err);
       continue;
     }
 
     const textDiv = document.createElement('div');
     textDiv.classList.add('text-item');
-
 
     const metaDiv = document.createElement('div');
     metaDiv.classList.add('text-meta');
@@ -226,19 +231,21 @@ async function renderTextsList() {
       `label=${textData.label}`;
     textDiv.appendChild(metaDiv);
 
-
+    
     const tokensContainer = document.createElement('div');
     tokensContainer.classList.add('tokens-container');
-    const maxVal = Math.max(...item.activations, 0);
 
+    const maxVal = Math.max(...item.activations, 0);
     textData.tokens.forEach((token, idx) => {
       const span = document.createElement('span');
       span.classList.add('token');
       span.textContent = token;
+
       const actVal = item.activations[idx] || 0;
       let alpha = 0;
       if (maxVal > 0) alpha = actVal / maxVal;
       span.style.backgroundColor = `rgba(0, 255, 0, ${alpha})`;
+
       tokensContainer.appendChild(span);
     });
 
@@ -248,5 +255,4 @@ async function renderTextsList() {
 }
 
 window.addEventListener('DOMContentLoaded', initPage);
-
 
