@@ -154,7 +154,6 @@ function showFeatureMetadata() {
   }
   featureInfoEl.appendChild(p);
 
-  // Таблица Domain F1 / Domain Ranks
   const domainF1Obj = featObj["Domain F1"] || {};
   const domainRanksObj = featObj["Domain Ranks"] || {};
   if (Object.keys(domainF1Obj).length > 0) {
@@ -162,9 +161,8 @@ function showFeatureMetadata() {
     featureDomainTablesEl.appendChild(domainTable);
   }
 
-  // Таблица Model F1 / Model Ranks
-  const modelF1Obj = featObj["Model F1"] || {};
-  const modelRanksObj = featObj["Model Ranks"] || {};
+  const modelF1Obj = featObj["Models F1"] || {};
+  const modelRanksObj = featObj["Models Ranks"] || {};
   if (Object.keys(modelF1Obj).length > 0) {
     const modelTable = createF1RankTable(modelF1Obj, modelRanksObj, "Model");
     featureDomainTablesEl.appendChild(modelTable);
