@@ -1,0 +1,1 @@
+{"text_id":23425,"tokens":["We"," give"," an"," algorithm"," that"," for"," an"," input"," n"," -","vertex"," graph"," G"," and"," integer"," k"," ","0",","," in"," time"," ","2"," O"," (","k",")"," n"," either"," outputs"," that"," the"," tree","width"," of"," G"," is"," ","0"],"sub_source":"sci_gen","model":"flan_t5_small","label":1}
